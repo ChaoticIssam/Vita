@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
+/* Critical Base Reset to Eliminate Flash of Unstyled Content (FOUC) */
 :root {
-  --background: #f4f6fb;
-  --foreground: #0f172a;
+  --background: #04050a;
+  --foreground: #f8fafc;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -10,23 +12,37 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-hubballi: var(--font-hubballi);
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 html {
   min-height: 100%;
+  background-color: #04050a !important;
+  color: #f8fafc !important;
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: #04050a !important;
+  color: #f8fafc !important;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Prevent unstyled SVG expansion during initial render/hydration */
+svg {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 100%;
+  height: auto;
 }
 
 a {
@@ -49,4 +65,44 @@ a {
   background-image: linear-gradient(rgba(148, 163, 184, 0.11) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.11) 1px, transparent 1px);
   background-size: 28px 28px;
+}
+
+/* Auth Ambient Activity & Focus Glow */
+@keyframes ambientPulse {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08) translateY(-8px);
+  }
+}
+
+@keyframes lightBeam {
+  0%, 100% {
+    opacity: 0.75;
+    filter: blur(14px);
+  }
+  50% {
+    opacity: 0.95;
+    filter: blur(10px);
+  }
+}
+
+.animate-ambient-pulse {
+  animation: ambientPulse 8s ease-in-out infinite;
+}
+
+.animate-light-beam {
+  animation: lightBeam 6s ease-in-out infinite;
+}
+
+/* Digital activity background grid */
+.activity-grid-bg {
+  background-image: 
+    radial-gradient(circle at 50% 30%, rgba(56, 189, 248, 0.08) 0%, transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px;
 }

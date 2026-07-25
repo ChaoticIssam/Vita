@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Hubballi } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,8 +12,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const hubballi = Hubballi({
+  weight: "400",
+  variable: "--font-hubballi",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Vita",
+  title: "Vita - Activity & Focus Intelligence",
   description: "Activity insights, goals, and focus tracking for Vita.",
 };
 
@@ -25,9 +32,32 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${hubballi.variable} h-full antialiased bg-[#04050a]`}
+      style={{ backgroundColor: '#04050a', color: '#ffffff' }}
     >
-      <body className="min-h-full bg-[radial-gradient(circle_at_top,_rgba(39,47,88,0.28),_transparent_42%),linear-gradient(180deg,_#07111f_0%,_#0b1320_44%,_#f4f6fb_44%,_#f4f6fb_100%)] text-slate-950">
+      <head>
+        {/* Critical zero-latency inline CSS: Runs on frame 0 before external CSS or JS loads */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          html, body {
+            background-color: #04050a !important;
+            color: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: 100vh !important;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          }
+          *, *::before, *::after {
+            box-sizing: border-box;
+          }
+          input, button {
+            font-family: inherit;
+          }
+        ` }} />
+      </head>
+      <body 
+        className="min-h-full bg-[#04050a] text-slate-100 font-sans antialiased"
+        style={{ backgroundColor: '#04050a', color: '#ffffff', minHeight: '100vh', margin: 0, padding: 0 }}
+      >
         {children}
       </body>
     </html>
