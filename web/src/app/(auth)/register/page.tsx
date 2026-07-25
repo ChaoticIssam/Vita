@@ -68,7 +68,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex h-full flex-col justify-between space-y-6" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <form action="javascript:void(0);" onSubmit={handleSubmit} className="flex h-full flex-col justify-between space-y-6" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div className="space-y-5 pt-2">
               <label className="block text-left relative group" style={{ display: 'block', width: '100%', marginBottom: '16px' }}>
                 <input

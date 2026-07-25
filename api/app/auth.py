@@ -1,11 +1,12 @@
-import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import jwt
 from pwdlib import PasswordHash
 from pwdlib.hashers.bcrypt import BcryptHasher
+from sqlalchemy.orm import Session
 
+from app.models import User
 from app.schemas import UserCreate, UserResponse
 
 SECRET_KEY = "vita-super-secret-key-change-in-production"
@@ -13,9 +14,6 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 password_hash = PasswordHash((BcryptHasher(),))
-
-# In-memory User Database (can easily plug into SQLAlchemy / Postgres)
-users_db: dict[str, dict] = {}
 
 
 def hash_password(password: str) -> str:
@@ -41,30 +39,29 @@ def decode_access_token(token: str) -> Optional[dict]:
         return None
 
 
-def get_user_by_email(email: str) -> Optional[dict]:
+def get_user_by_email(db: Session, email: str) -> Optional[User]:
     email_lower = email.lower().strip()
-    for u in users_db.values():
-        if u["email"].lower() == email_lower:
-            return u
-    return None
+    return db.query(User).filter(User.email == email_lower).first()
 
 
-def create_user(user_in: UserCreate) -> UserResponse:
-    user_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
+def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
+    return db.query(User).filter(User.id == user_id).first()
+
+
+def create_user(db: Session, user_in: UserCreate) -> UserResponse:
     hashed = hash_password(user_in.password)
-
-    user_record = {
-        "id": user_id,
-        "name": user_in.name,
-        "email": user_in.email.lower().strip(),
-        "hashed_password": hashed,
-        "created_at": now,
-    }
-    users_db[user_id] = user_record
-    return UserResponse(
-        id=user_id,
+    db_user = User(
         name=user_in.name,
-        email=user_in.email,
-        created_at=now,
+        email=user_in.email.lower().strip(),
+        hashed_password=hashed,
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    return UserResponse(
+        id=db_user.id,
+        name=db_user.name,
+        email=db_user.email,
+        created_at=db_user.created_at,
     )

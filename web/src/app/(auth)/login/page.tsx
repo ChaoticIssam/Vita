@@ -67,7 +67,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex h-full flex-col justify-between" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <form action="javascript:void(0);" onSubmit={handleSubmit} className="flex h-full flex-col justify-between" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div className="space-y-6 pt-2">
               <label className="block text-left relative group" style={{ display: 'block', width: '100%', marginBottom: '20px' }}>
                 <input
