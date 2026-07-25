@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Hubballi } from "next/font/google";
+import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -58,7 +59,7 @@ export default function RootLayout({
         className="min-h-full bg-[#04050a] text-slate-100 font-sans antialiased"
         style={{ backgroundColor: '#04050a', color: '#ffffff', minHeight: '100vh', margin: 0, padding: 0 }}
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
