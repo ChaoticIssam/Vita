@@ -59,9 +59,4 @@ def create_user(db: Session, user_in: UserCreate) -> UserResponse:
     db.commit()
     db.refresh(db_user)
 
-    return UserResponse(
-        id=db_user.id,
-        name=db_user.name,
-        email=db_user.email,
-        created_at=db_user.created_at,
-    )
+    return UserResponse.model_validate(db_user)

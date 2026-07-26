@@ -58,51 +58,107 @@ a {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(24px);
   border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
 }
 
-.dashboard-grid {
-  background-image: linear-gradient(rgba(148, 163, 184, 0.11) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.11) 1px, transparent 1px);
-  background-size: 28px 28px;
+/* ========================================================================= */
+/* SHAPE-AWARE ENTRANCE ANIMATIONS (POP, EXPAND, SLIDE)                      */
+/* ========================================================================= */
+
+/* Circular Node Bloom Entrance (Spring Pop) */
+@keyframes node-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-/* Auth Ambient Activity & Focus Glow */
-@keyframes ambientPulse {
+/* Central Focus Dial Expansion */
+@keyframes dial-expand {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Left Panel Slide In */
+@keyframes panel-slide-left {
+  0% {
+    opacity: 0;
+    transform: translate3d(-24px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Right Drawer Slide In */
+@keyframes drawer-slide-right {
+  0% {
+    opacity: 0;
+    transform: translate3d(24px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Page Tab Entrance */
+@keyframes page-entrance {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Utility Animation Classes */
+.animate-node-pop {
+  animation: node-pop-in 340ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-dial-expand {
+  animation: dial-expand 380ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-panel-left {
+  animation: panel-slide-left 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-drawer-right {
+  animation: drawer-slide-right 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-page-entrance {
+  animation: page-entrance 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulse-subtle {
   0%, 100% {
-    opacity: 0.55;
-    transform: scale(1) translateY(0);
+    opacity: 1;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.8;
-    transform: scale(1.08) translateY(-8px);
+    opacity: 0.5;
+    transform: scale(0.92);
   }
 }
 
-@keyframes lightBeam {
-  0%, 100% {
-    opacity: 0.75;
-    filter: blur(14px);
-  }
-  50% {
-    opacity: 0.95;
-    filter: blur(10px);
-  }
-}
-
-.animate-ambient-pulse {
-  animation: ambientPulse 8s ease-in-out infinite;
-}
-
-.animate-light-beam {
-  animation: lightBeam 6s ease-in-out infinite;
-}
-
-/* Digital activity background grid */
-.activity-grid-bg {
-  background-image: 
-    radial-gradient(circle at 50% 30%, rgba(56, 189, 248, 0.08) 0%, transparent 60%),
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 100% 100%, 36px 36px, 36px 36px;
+.animate-pulse-subtle {
+  animation: pulse-subtle 2.5s ease-in-out infinite;
 }

@@ -60,12 +60,7 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
-    return UserResponse(
-        id=user_record.id,
-        name=user_record.name,
-        email=user_record.email,
-        created_at=user_record.created_at,
-    )
+    return UserResponse.model_validate(user_record)
 
 
 @app.get("/", tags=["system"])
@@ -108,12 +103,7 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)) -> TokenRespons
             detail="Invalid email or password.",
         )
 
-    user_resp = UserResponse(
-        id=user_record.id,
-        name=user_record.name,
-        email=user_record.email,
-        created_at=user_record.created_at,
-    )
+    user_resp = UserResponse.model_validate(user_record)
     access_token = create_access_token(data={"sub": user_resp.id, "email": user_resp.email})
     return TokenResponse(access_token=access_token, user=user_resp)
 

@@ -10,6 +10,8 @@ class ActivityEvent(BaseModel):
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     payload: dict[str, Any] = Field(default_factory=dict)
 
+    model_config = {"from_attributes": True}
+
 
 # Authentication Schemas
 class UserCreate(BaseModel):
@@ -29,8 +31,12 @@ class UserResponse(BaseModel):
     email: str
     created_at: datetime
 
+    model_config = {"from_attributes": True}
+
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+    model_config = {"from_attributes": True}
