@@ -1,4 +1,4 @@
-.PHONY: help up up-api up-web down build restart status logs logs-api logs-web dev-api dev-web test-api clean
+.PHONY: help up up-api up-web down build restart status logs logs-api logs-web dev-api dev-web dev-desktop test-api clean
 
 .DEFAULT_GOAL := help
 
@@ -21,6 +21,7 @@ help:
 	@echo "  --- Local Development ---"
 	@echo "  make dev-api     Run API backend server locally (port 8000)"
 	@echo "  make dev-web     Run Web frontend server locally (port 3000)"
+	@echo "  make dev-desktop Run native macOS Electron desktop app"
 	@echo "  make test-api    Run backend pytest unit test suite"
 	@echo "  make clean       Remove temporary build caches and artifacts"
 	@echo ""
@@ -62,6 +63,9 @@ dev-api:
 
 dev-web:
 	npm run dev --prefix web
+
+dev-desktop:
+	npm run dev --prefix desktop
 
 test-api:
 	PYTHONPATH=api .venv/bin/pytest api/tests
