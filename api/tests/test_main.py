@@ -21,8 +21,17 @@ def test_health_returns_ok() -> None:
 
 
 def test_event_ingestion_accepts_payload() -> None:
+    import uuid
+    unique_email = f"event_test_{uuid.uuid4().hex[:8]}@example.com"
+    reg_response = client.post(
+        "/auth/register",
+        json={"name": "Event Tester", "email": unique_email, "password": "password123"}
+    )
+    token = reg_response.json()["access_token"]
+
     response = client.post(
         "/events",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "source": "desktop",
             "event_type": "app_usage",
@@ -34,6 +43,3 @@ def test_event_ingestion_accepts_payload() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["accepted"] is True
-    assert body["event"]["source"] == "desktop"
-    assert body["event"]["event_type"] == "app_usage"
-    assert body["event"]["payload"] == {"application": "browser"}

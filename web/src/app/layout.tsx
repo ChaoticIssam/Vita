@@ -37,6 +37,10 @@ export default function RootLayout({
       style={{ backgroundColor: '#04050a', color: '#ffffff' }}
     >
       <head>
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content="default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* data: blob:;"
+        />
         {/* Critical zero-latency inline CSS: Runs on frame 0 before external CSS or JS loads */}
         <style dangerouslySetInnerHTML={{ __html: `
           html, body {

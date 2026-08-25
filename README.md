@@ -2,7 +2,7 @@
 
 Vita is a desktop-first productivity and activity insights platform that helps users understand how they spend time on their devices and turn that data into actionable habits.
 
-## ✨ Vision
+##  Vision
 
 **Turn daily digital activity into clear, actionable productivity insights.**
 
@@ -11,7 +11,7 @@ Vita combines:
 - A FastAPI backend for secure ingestion and analytics
 - A desktop application (Electron) for device activity collection
 
-## 🧱 Monorepo Structure
+##  Monorepo Structure
 
 ```text
 Vita/
@@ -24,7 +24,7 @@ Vita/
 └── docker-compose.yml    # Local development services (PostgreSQL)
 ```
 
-## 🛠 Tech Stack
+##  Tech Stack
 
 ### Frontend (`web/`)
 - Next.js (App Router)
@@ -44,7 +44,7 @@ Vita/
 ### Data
 - PostgreSQL
 
-## 🚀 MVP Scope
+##  MVP Scope
 
 - User authentication
 - Activity event ingestion (`POST /events`)
@@ -53,7 +53,7 @@ Vita/
 - Goals tracking
 - Privacy controls (pause tracking, delete/export user data)
 
-## 📁 Directory Details
+##  Directory Details
 
 ### `web/`
 Contains the user-facing interface:
@@ -80,7 +80,7 @@ Contains infrastructure and ops documentation:
 - Deployment notes
 - Architecture references
 
-## ⚙️ Getting Started
+##  Getting Started
 
 ### 1) Clone the repository
 
@@ -121,7 +121,7 @@ npm install
 npm run dev
 ```
 
-## 🔐 Environment Variables (planned)
+##  Environment Variables (planned)
 
 Each app will include its own `.env.example` file.
 
@@ -130,7 +130,7 @@ High-level variables:
 - `API_BASE_URL` for web/desktop clients
 - `JWT_SECRET` (or equivalent auth secret)
 
-## 🧪 Testing Strategy (planned)
+##  Testing Strategy (planned)
 
 - Backend: `pytest` (unit + integration)
 - Frontend: component tests + e2e
@@ -147,13 +147,13 @@ High-level variables:
 - [ ] Privacy/export/delete workflows
 - [ ] Deployment and demo video
 
-## 🤝 Contribution Guidelines
+##  Contribution Guidelines
 
 For now, this is a personal portfolio project. Suggested workflow:
 1. Create a feature branch from `main`
 2. Open PR with clear description and screenshots (if UI)
 3. Keep commits small and focused
 
-## 📄 License
+##  License
 
 No license selected yet. Add one before public distribution.

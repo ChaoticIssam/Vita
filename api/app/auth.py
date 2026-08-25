@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import os
 
 import jwt
 from pwdlib import PasswordHash
@@ -9,7 +10,13 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.schemas import UserCreate, UserResponse
 
-SECRET_KEY = "vita-super-secret-key-change-in-production"
+_raw_secret = os.getenv("JWT_SECRET_KEY", "")
+if not _raw_secret or "change" in _raw_secret.lower() or "secret" in _raw_secret.lower():
+    raise RuntimeError(
+        "JWT_SECRET_KEY env var is missing or still set to a placeholder. "
+        "Generate one with: openssl rand -hex 32"
+    )
+SECRET_KEY = _raw_secret
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
@@ -54,6 +61,8 @@ def create_user(db: Session, user_in: UserCreate) -> UserResponse:
         name=user_in.name,
         email=user_in.email.lower().strip(),
         hashed_password=hashed,
+        avatar_url=user_in.avatar_url,
+        focus_fields=user_in.focus_fields,
     )
     db.add(db_user)
     db.commit()

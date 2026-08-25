@@ -1,8 +1,8 @@
-.PHONY: help up up-api up-web down build restart status logs logs-api logs-web dev-api dev-web dev-desktop test-api clean
+.PHONY: help up up-api up-web down purge build restart status logs logs-api logs-web dev-api dev-web dev-desktop test-api clean
 
 .DEFAULT_GOAL := help
 
-## help: Display available commands
+
 help:
 	@echo "Vita Workspace Commands:"
 	@echo ""
@@ -11,6 +11,7 @@ help:
 	@echo "  make up-api      Start API backend & DB containers separately"
 	@echo "  make up-web      Start Web frontend container separately"
 	@echo "  make down        Stop and remove all containers"
+	@echo "  make purge       Stop containers and delete ALL volumes & images"
 	@echo "  make build       Build or rebuild Docker images"
 	@echo "  make restart     Restart all running containers"
 	@echo "  make status      Display container status"
@@ -26,7 +27,7 @@ help:
 	@echo "  make clean       Remove temporary build caches and artifacts"
 	@echo ""
 
-## Docker Commands
+
 up:
 	docker compose up -d
 
@@ -38,6 +39,9 @@ up-web:
 
 down:
 	docker compose down
+
+purge:
+	docker compose down -v --rmi all --remove-orphans
 
 build:
 	docker compose build
@@ -57,7 +61,7 @@ logs-api:
 logs-web:
 	docker compose logs -f web
 
-## Local Dev Commands
+
 dev-api:
 	PYTHONPATH=api .venv/bin/uvicorn app.main:app --reload --port 8000
 

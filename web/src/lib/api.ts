@@ -4,6 +4,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  avatar_url?: string;
+  focus_fields?: string[];
   created_at: string;
 }
 
@@ -13,16 +15,42 @@ export interface AuthResponse {
   user: User;
 }
 
-export async function registerUser(name: string, email: string, password: string): Promise<AuthResponse> {
+export async function registerUser(
+  name: string,
+  email: string,
+  password: string,
+  avatar_url?: string,
+  focus_fields?: string[]
+): Promise<AuthResponse> {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, email, password, avatar_url, focus_fields }),
   });
 
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.detail || "Registration failed. Please try again.");
+  }
+  return data;
+}
+
+export async function updateUserProfile(
+  token: string,
+  payload: { name?: string; avatar_url?: string; focus_fields?: string[] }
+): Promise<User> {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || "Failed to update profile.");
   }
   return data;
 }

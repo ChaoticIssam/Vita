@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 from typing import Any
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
 
 
 class ActivityEvent(BaseModel):
-    source: str = Field(..., examples=["desktop"])
-    event_type: str = Field(..., examples=["app_usage"])
+    source: str = Field(..., min_length=1, max_length=50, examples=["desktop"])
+    event_type: str = Field(..., min_length=1, max_length=50, examples=["app_usage"])
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     payload: dict[str, Any] = Field(default_factory=dict)
 
@@ -16,18 +17,35 @@ class ActivityEvent(BaseModel):
 class UserCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=100, examples=["Alex Morgan"])
     email: EmailStr = Field(..., examples=["alex@example.com"])
-    password: str = Field(..., min_length=6, max_length=100, examples=["password123"])
+    password: str = Field(..., min_length=8, max_length=128, examples=["s3cur3P@ssw0rd"])
+    avatar_url: str | None = Field(default=None)
+    focus_fields: list[str] | None = Field(default=None)
+
+    @field_validator("name")
+    @classmethod
+    def name_no_html(cls, v: str) -> str:
+        if re.search(r"[<>\"']", v):
+            raise ValueError("Name contains invalid characters")
+        return v.strip()
+
+
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=100)
+    avatar_url: str | None = Field(default=None)
+    focus_fields: list[str] | None = Field(default=None)
 
 
 class UserLogin(BaseModel):
-    email: str = Field(..., examples=["alex@example.com"])
-    password: str = Field(..., examples=["password123"])
+    email: EmailStr = Field(..., examples=["alex@example.com"])
+    password: str = Field(..., min_length=1, max_length=128, examples=["s3cur3P@ssw0rd"])
 
 
 class UserResponse(BaseModel):
     id: str
     name: str
     email: str
+    avatar_url: str | None = None
+    focus_fields: list[str] | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -44,15 +62,19 @@ class TokenResponse(BaseModel):
 # Focus Task Schemas
 class FocusTaskCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
-    category: str = Field(default="Engineering")
-    target_hours: float = Field(default=2.0, ge=0.1)
+    category: str = Field(default="Engineering", max_length=100)
+    target_hours: float = Field(default=2.0, ge=0.1, le=24.0)
+    scheduled_date: str | None = Field(default=None, max_length=50)
+    start_time: str | None = Field(default=None, max_length=20)
 
 
 class FocusTaskUpdate(BaseModel):
-    title: str | None = None
-    category: str | None = None
-    spent_hours: float | None = None
-    target_hours: float | None = None
+    title: str | None = Field(default=None, max_length=255)
+    category: str | None = Field(default=None, max_length=100)
+    spent_hours: float | None = Field(default=None, ge=0.0, le=10000.0)
+    target_hours: float | None = Field(default=None, ge=0.1, le=24.0)
+    scheduled_date: str | None = Field(default=None, max_length=50)
+    start_time: str | None = Field(default=None, max_length=20)
     completed: bool | None = None
 
 
@@ -63,6 +85,8 @@ class FocusTaskResponse(BaseModel):
     category: str
     spent_hours: float
     target_hours: float
+    scheduled_date: str | None = None
+    start_time: str | None = None
     completed: bool
     created_at: datetime
 
@@ -71,10 +95,11 @@ class FocusTaskResponse(BaseModel):
 
 # Focus Session Schemas
 class FocusSessionCreate(BaseModel):
-    duration_minutes: float = Field(default=25.0)
-    efficiency_score: float = Field(default=0.0)
-    app_name: str = Field(default="VS Code")
-    category: str = Field(default="Coding & Dev")
+    duration_minutes: float = Field(default=25.0, ge=0.0, le=1440.0)
+    efficiency_score: float = Field(default=0.0, ge=0.0, le=100.0)
+    app_name: str = Field(default="VS Code", max_length=200)
+    category: str = Field(default="Coding & Dev", max_length=100)
+    created_at: datetime | None = None
 
 
 class FocusSessionResponse(BaseModel):
@@ -102,7 +127,7 @@ class AnalyticsSummaryResponse(BaseModel):
 
 # AI App Classifier Schemas
 class AppClassifyRequest(BaseModel):
-    raw_name: str = Field(..., examples=["Postman"])
+    raw_name: str = Field(..., min_length=1, max_length=200, examples=["Postman"])
 
 
 class AppClassifyResponse(BaseModel):

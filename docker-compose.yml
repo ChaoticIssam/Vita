@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: vita
-      POSTGRES_PASSWORD: vita
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: vita
     ports:
       - "5432:5432"
@@ -26,7 +26,10 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+psycopg://vita:vita@db:5432/vita
+      DATABASE_URL: postgresql+psycopg://vita:${POSTGRES_PASSWORD}@db:5432/vita
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      APP_ENV: ${APP_ENV:-development}
     ports:
       - "8000:8000"
     volumes:

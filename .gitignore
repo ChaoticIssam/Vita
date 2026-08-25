@@ -43,3 +43,10 @@ coverage/
 # Logs
 logs/
 *.log
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads
+videoRecording/

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import DateTime, String, Float, Boolean, ForeignKey, JSON
+from sqlalchemy import DateTime, String, Float, Boolean, ForeignKey, JSON, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -13,6 +13,8 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    focus_fields: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     tasks: Mapped[list["FocusTask"]] = relationship("FocusTask", back_populates="user", cascade="all, delete-orphan")
@@ -28,6 +30,8 @@ class FocusTask(Base):
     category: Mapped[str] = mapped_column(String(100), default="Engineering")
     spent_hours: Mapped[float] = mapped_column(Float, default=0.0)
     target_hours: Mapped[float] = mapped_column(Float, default=2.0)
+    scheduled_date: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    start_time: Mapped[str | None] = mapped_column(String(20), nullable=True)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
@@ -46,3 +50,17 @@ class FocusSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user: Mapped["User"] = relationship("User", back_populates="sessions")
+
+
+class ClassifiedApp(Base):
+    """Persistent cache for app classifications — avoids redundant LLM API calls across restarts."""
+    __tablename__ = "classified_apps"
+
+    app_name: Mapped[str] = mapped_column(String(200), primary_key=True)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(200), nullable=False)
+    efficiency: Mapped[int] = mapped_column(Float, nullable=False)
+    tier: Mapped[str] = mapped_column(String(20), default="heuristic")  # "heuristic", "tfidf", "llm"
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    classified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+

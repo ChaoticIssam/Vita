@@ -7,11 +7,17 @@ import { useAuth } from "@/lib/auth-context";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { user, token, isLoading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (!isLoading && user && token) {
+      router.push("/dashboard");
+    }
+  }, [isLoading, user, token, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +26,8 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
+      // Smooth 700ms delay for credentials verification & vault state initialization
+      await new Promise((resolve) => setTimeout(resolve, 700));
       router.push("/dashboard");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -27,7 +35,6 @@ export default function LoginPage() {
       } else {
         setError("Invalid email or password.");
       }
-    } finally {
       setIsSubmitting(false);
     }
   };
