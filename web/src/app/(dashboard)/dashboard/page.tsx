@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { TypewriterSessionLoader } from "../layout";
+import { DockNav } from "@/components/navigation/DockNav";
 import {
   RotateCcw,
   Bell,
@@ -337,7 +338,8 @@ export default function DashboardPage() {
   const [taskCategoryFilter, setTaskCategoryFilter] = useState<string>("all");
   const [taskList, setTaskList] = useState<TaskItem[]>([]);
   const [activeFocusTask, setActiveFocusTask] = useState<TaskItem | null>(null);
-  const [taskCompletionModal, setTaskCompletionModal] = useState<{ task: TaskItem; durationMinutes: number } | null>(null);
+  const [taskToast, setTaskToast] = useState<{ task: TaskItem; durationMinutes: number } | null>(null);
+
 
   // Precise duration formatter (e.g. 15m, 25m, 45m, 1h, 1h 30m, 2h 15m)
   const formatTimePrecise = (hours: number) => {
@@ -728,9 +730,9 @@ export default function DashboardPage() {
       setActiveSessionRunning(false);
       setTimerSeconds(sprintDuration * 60);
 
-      // Trigger Task Completion Confirmation Modal if sprint was launched for a specific task
+      // Show toast if sprint was launched for a specific task
       if (activeFocusTask) {
-        setTaskCompletionModal({
+        setTaskToast({
           task: activeFocusTask,
           durationMinutes: sprintDuration
         });
@@ -783,62 +785,55 @@ export default function DashboardPage() {
     };
   }, [activeSessionRunning, timerSeconds, sprintDuration, selectedApp, activeCategory]);
 
-  // Realtime Scheduled Tasks Clock Monitor:
-  // Automatically pops up completion verification modal when target time from start time has elapsed in real time!
-  const promptedTaskIds = useRef<Set<string>>(new Set());
 
+  // Realtime Scheduled Tasks Clock Monitor:
+  // Shows a toast notification (not a modal) when a scheduled task's time has elapsed.
   useEffect(() => {
     const checkScheduledTasks = () => {
-      if (taskCompletionModal) return;
+      if (taskToast) return;
 
       const now = new Date();
-      const todayYear = now.getFullYear();
-      const todayMonth = String(now.getMonth() + 1).padStart(2, "0");
-      const todayDay = String(now.getDate()).padStart(2, "0");
-      const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+      // Load persisted prompted IDs from localStorage
+      let persistedPrompted: Set<string>;
+      try {
+        const raw = localStorage.getItem("vita_prompted_task_ids");
+        persistedPrompted = raw ? new Set(JSON.parse(raw)) : new Set();
+      } catch {
+        persistedPrompted = new Set();
+      }
 
       for (const task of taskList) {
         if (task.completed) continue;
-        if (promptedTaskIds.current.has(task.id)) continue;
+        if (persistedPrompted.has(String(task.id))) continue;
 
-        // Check if task is scheduled for today
-        const isToday = !task.scheduledDate || task.scheduledDate === "Today" || task.scheduledDate === todayStr;
+        const taskDateStr = task.scheduledDate ? task.scheduledDate.split("T")[0] : "";
+        const isToday = !task.scheduledDate || task.scheduledDate === "Today" || taskDateStr === todayStr;
         if (!isToday) continue;
 
         if (task.startTime) {
-          const timeParts = task.startTime.split(":");
-          if (timeParts.length >= 2) {
-            const startH = parseInt(timeParts[0], 10);
-            const startM = parseInt(timeParts[1], 10);
-            if (!isNaN(startH) && !isNaN(startM)) {
-              const startMinutes = startH * 60 + startM;
-              const durationMinutes = Math.max(1, Math.round((task.targetHours || 0.4166) * 60));
-              const endMinutes = startMinutes + durationMinutes;
+          const [hStr, mStr] = task.startTime.split(":");
+          const startH = parseInt(hStr, 10);
+          const startM = parseInt(mStr, 10);
+          if (!isNaN(startH) && !isNaN(startM)) {
+            const durationMinutes = Math.max(1, Math.round((task.targetHours || 0.4166) * 60));
+            if (currentMinutes >= startH * 60 + startM + durationMinutes) {
+              // Persist so this task won't prompt again
+              persistedPrompted.add(String(task.id));
+              try { localStorage.setItem("vita_prompted_task_ids", JSON.stringify([...persistedPrompted])); } catch {}
 
-              // If current local time is at or past the scheduled end time
-              if (currentMinutes >= endMinutes) {
-                promptedTaskIds.current.add(task.id);
-                setTaskCompletionModal({
-                  task: task,
-                  durationMinutes: durationMinutes
-                });
+              setTaskToast({ task, durationMinutes });
 
-                // In-app / native notification
-                if (typeof window !== "undefined") {
-                  if ((window as any).electronAPI?.sendTimerCompletedNotification) {
-                    (window as any).electronAPI.sendTimerCompletedNotification({
-                      category: task.category,
-                      durationMinutes: durationMinutes
-                    });
-                  } else if ("Notification" in window && Notification.permission === "granted") {
-                    new Notification("Scheduled Focus Time Finished! 🎯", {
-                      body: `Your scheduled duration for "${task.title}" has finished. Did you complete this task?`
-                    });
-                  }
+              if (typeof window !== "undefined") {
+                if ((window as any).electronAPI?.sendTimerCompletedNotification) {
+                  (window as any).electronAPI.sendTimerCompletedNotification({ category: task.category, durationMinutes });
+                } else if ("Notification" in window && Notification.permission === "granted") {
+                  new Notification("Focus Time Finished! 🎯", { body: `"${task.title}" — did you complete it?` });
                 }
-                break;
               }
+              break;
             }
           }
         }
@@ -848,7 +843,8 @@ export default function DashboardPage() {
     checkScheduledTasks();
     const interval = setInterval(checkScheduledTasks, 3000);
     return () => clearInterval(interval);
-  }, [taskList, taskCompletionModal]);
+  }, [taskList, taskToast]);
+
 
   // Sync Live Timer Status with macOS Menu Bar / Tray
   useEffect(() => {
@@ -1022,10 +1018,16 @@ export default function DashboardPage() {
     const addedHours = durationMinutes / 60;
     const newSpentHours = (task.spentHours || 0) + addedHours;
 
-    // Optimistic UI update: If 'Still Working', keep completed strictly false until manually set
-    setTaskList(prev => prev.map(t => t.id === task.id ? { ...t, spentHours: newSpentHours, completed: wasCompleted ? true : false } : t));
+    setTaskList(prev => prev.map(t => t.id === task.id ? { ...t, spentHours: newSpentHours, completed: wasCompleted } : t));
     setActiveFocusTask(null);
-    setTaskCompletionModal(null);
+    setTaskToast(null);
+    // Also persist to localStorage so the task won't re-prompt on next visit
+    try {
+      const raw = localStorage.getItem("vita_prompted_task_ids");
+      const persisted: Set<string> = raw ? new Set(JSON.parse(raw)) : new Set();
+      persisted.add(String(task.id));
+      localStorage.setItem("vita_prompted_task_ids", JSON.stringify([...persisted]));
+    } catch {}
 
     // Build exact session timestamp so it plots accurately on the Daily/Monthly Calendar
     const sessionTimestamp = parseTaskDateAndTimeToIso(task.scheduledDate, task.startTime);
@@ -1194,7 +1196,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="w-screen h-screen overflow-hidden bg-[#e4e7e4] text-slate-800 flex flex-col p-4 sm:p-6 select-none font-sans">
+    <div className="relative h-screen w-screen overflow-hidden bg-[#e4e7e4] text-slate-800 font-sans select-none antialiased flex flex-col justify-between p-4 sm:p-6 lg:p-8">
 
       {/* Sprint Completion & Focus Alert In-App Banner */}
       {sprintCompleteBanner && (
@@ -1422,13 +1424,13 @@ export default function DashboardPage() {
       {/* ========================================================================= */}
       {/* 2. MAIN VIEWPORT GRID: Left Focus Panel | Central Canvas | Right Drawer   */}
       {/* ========================================================================= */}
-      <div className="flex-1 flex space-x-6 min-h-0 overflow-hidden relative">
+      <div className="flex-1 flex space-x-6 min-h-0 overflow-hidden relative animate-page-entrance">
 
         {/* ----------------------------------------------------------------------- */}
         {/* LEFT COLUMN: Total Focus Time Gauge + Active Focus Sessions (Home Only) */}
         {/* ----------------------------------------------------------------------- */}
         {activeDockTab === "overview" && (
-          <aside className="w-72 lg:w-80 flex flex-col space-y-3 shrink-0 overflow-y-auto pr-1 pb-20 animate-panel-left">
+          <aside className="w-72 lg:w-80 flex flex-col space-y-3 shrink-0 overflow-y-auto pr-1 pb-20">
 
             {/* Top Card: Total Focus Time Gauge */}
             <div className="bg-[#dcdfdc]/80 rounded-3xl p-5 border border-white/60 shadow-xs flex flex-col items-center relative overflow-hidden transition-all duration-300 hover:shadow-md shrink-0 space-y-2">
@@ -1827,7 +1829,7 @@ export default function DashboardPage() {
 
           {/* VIEW 1: OVERVIEW CANVAS (Main Focus Command Center Dial & App Orbit) */}
           {activeDockTab === "overview" && (
-            <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 relative animate-page-entrance">
+            <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 relative">
 
               {/* Central Canvas with Safe Orbital Perimeter Positions for App Nodes */}
               <div className="relative w-full flex-1 flex items-center justify-center overflow-visible">
@@ -1945,7 +1947,7 @@ export default function DashboardPage() {
                 })()}
 
                 {/* MAIN CENTRAL FOCUS DIAL WIDGET */}
-                <div className="relative flex items-center justify-center animate-dial-expand">
+                <div className="relative flex items-center justify-center">
 
                   <div
                     onClick={() => {
@@ -3109,86 +3111,39 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* TASK COMPLETION VERIFICATION MODAL - SIMPLE & PROFESSIONAL */}
-          {taskCompletionModal && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150 relative">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                      <CheckSquare className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-900">Focus Time Completed</h3>
-                      <p className="text-xs text-slate-500">Scheduled {taskCompletionModal.durationMinutes}m sprint finished</p>
-                    </div>
+          {/* TASK COMPLETION TOAST — slides in from bottom-right, no backdrop */}
+          {taskToast && (
+            <div className="fixed bottom-24 right-6 z-[9999] w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 space-y-3 animate-in slide-in-from-bottom-4 fade-in duration-300">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+                    <CheckSquare className="w-3.5 h-3.5" />
                   </div>
-                  <button
-                    onClick={() => setTaskCompletionModal(null)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                    title="Dismiss"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-900 leading-tight">Focus Time Finished</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[180px]">{taskToast.task.title}</p>
+                  </div>
                 </div>
-
-                {/* Task Details Card */}
-                {(() => {
-                  const isPersonal = taskCompletionModal.task.category.toLowerCase().includes("health") || taskCompletionModal.task.category.toLowerCase().includes("gym") || taskCompletionModal.task.category.toLowerCase().includes("personal");
-                  const isAdmin = taskCompletionModal.task.category.toLowerCase().includes("admin") || taskCompletionModal.task.category.toLowerCase().includes("routine") || taskCompletionModal.task.category.toLowerCase().includes("mail");
-                  const matchedCat = categories.find(c => c.name === taskCompletionModal.task.category || (taskCompletionModal.task.category.toLowerCase().includes("engineer") && c.name.toLowerCase().includes("coding")));
-
-                  const badgeStyle = isPersonal
-                    ? "bg-rose-100 text-rose-950 border-rose-200"
-                    : isAdmin
-                      ? "bg-teal-100 text-teal-950 border-teal-200"
-                      : (matchedCat?.badgeColor || "bg-slate-100 text-slate-700 border-slate-200");
-
-                  return (
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${badgeStyle}`}>
-                          {taskCompletionModal.task.category}
-                        </span>
-                        <span className="text-[10px] font-mono text-slate-500">
-                          {taskCompletionModal.durationMinutes} min
-                        </span>
-                      </div>
-
-                      <p className="text-xs font-semibold text-slate-900">
-                        {taskCompletionModal.task.title}
-                      </p>
-
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1.5 border-t border-slate-200/60">
-                        <span>{taskCompletionModal.task.scheduledDate || "Today"}{taskCompletionModal.task.startTime ? ` • ${taskCompletionModal.task.startTime}` : ""}</span>
-                        <span className="text-slate-600 font-sans font-medium">Adds to Calendar</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                <p className="text-xs text-slate-600">
-                  Did you finish this task, or are you still working on it?
-                </p>
-
-                {/* Action Buttons */}
-                <div className="flex items-center space-x-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleResolveTaskSprint(taskCompletionModal.task, taskCompletionModal.durationMinutes, false)}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-50 transition cursor-pointer text-center"
-                  >
-                    Still Working
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleResolveTaskSprint(taskCompletionModal.task, taskCompletionModal.durationMinutes, true)}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition cursor-pointer shadow-xs text-center"
-                  >
-                    Yes, Completed!
-                  </button>
-                </div>
+                <button
+                  onClick={() => setTaskToast(null)}
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handleResolveTaskSprint(taskToast.task, taskToast.durationMinutes, false)}
+                  className="flex-1 py-2 rounded-xl border border-slate-200 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Still Working
+                </button>
+                <button
+                  onClick={() => handleResolveTaskSprint(taskToast.task, taskToast.durationMinutes, true)}
+                  className="flex-1 py-2 rounded-xl bg-slate-900 text-white text-[11px] font-medium hover:bg-slate-800 transition cursor-pointer"
+                >
+                  Yes, Done! ✓
+                </button>
               </div>
             </div>
           )}
@@ -3650,69 +3605,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ----------------------------------------------------------------- */}
-          {/* FLOATING BOTTOM DOCK: Always visible pinned navigation at bottom   */}
-          {/* ----------------------------------------------------------------- */}
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30">
-            <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-xl px-4 py-2.5 rounded-full border border-white/90 shadow-xl">
-
-              {/* Dock Button 1: Overview */}
-              <button
-                onClick={() => setActiveDockTab("overview")}
-                title="Command Center Overview Canvas"
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer hover:scale-110 active:scale-95 ${activeDockTab === "overview" ? "bg-[#181a1b] text-white shadow-md" : "text-slate-700 hover:bg-white/60"}`}
-              >
-                <Grid className="w-4 h-4" />
-              </button>
-
-              {/* Dock Button 2: Activity Timeline */}
-              <button
-                onClick={() => setActiveDockTab("calendar")}
-                title="Activity & Focus Chronological Log"
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer hover:scale-110 active:scale-95 ${activeDockTab === "calendar" ? "bg-[#181a1b] text-white shadow-md" : "text-slate-700 hover:bg-white/60"}`}
-              >
-                <Calendar className="w-4 h-4" />
-              </button>
-
-              {/* Dock Button 3: Focus Tasks */}
-              <button
-                onClick={() => setActiveDockTab("tasks")}
-                title="Personal Focus Goals & Task Queue"
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer hover:scale-110 active:scale-95 ${activeDockTab === "tasks" ? "bg-[#181a1b] text-white shadow-md" : "text-slate-700 hover:bg-white/60"}`}
-              >
-                <FileText className="w-4 h-4" />
-              </button>
-
-              {/* Dock Button 4: Analytics */}
-              <button
-                onClick={() => setActiveDockTab("analytics")}
-                title="App Time Allocation & Weekly Analytics"
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer hover:scale-110 active:scale-95 ${activeDockTab === "analytics" ? "bg-[#181a1b] text-white shadow-md" : "text-slate-700 hover:bg-white/60"}`}
-              >
-                <PieChart className="w-4 h-4" />
-              </button>
-
-              {/* Dock Button 5: AI Insights */}
-              <button
-                onClick={() => setActiveDockTab("insights")}
-                title="AI Productivity Coach & Flow State Insights"
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer hover:scale-110 active:scale-95 ${activeDockTab === "insights" ? "bg-[#181a1b] text-white shadow-md" : "text-slate-700 hover:bg-white/60"}`}
-              >
-                <Bookmark className="w-4 h-4" />
-              </button>
-
-              {/* Dock Button 6: Privacy Settings */}
-              <button
-                onClick={() => setActiveDockTab("settings")}
-                title="Privacy Settings & On-Device Vault Control"
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition cursor-pointer hover:scale-110 active:scale-95 ${activeDockTab === "settings" ? "bg-[#181a1b] text-white shadow-md" : "text-slate-700 hover:bg-white/60"}`}
-              >
-                <Shield className="w-4 h-4" />
-              </button>
-
-            </div>
-          </div>
-
         </main>
 
         {/* ----------------------------------------------------------------------- */}
@@ -3720,7 +3612,7 @@ export default function DashboardPage() {
         {/* ----------------------------------------------------------------------- */}
         {activeDockTab === "overview" && (
           showRightDrawer ? (
-            <aside className="w-72 lg:w-80 bg-[#cde4eb]/80 backdrop-blur-md rounded-3xl p-5 border border-white/60 shadow-xs flex flex-col justify-between shrink-0 relative overflow-y-auto animate-drawer-right">
+            <aside className="w-72 lg:w-80 bg-[#cde4eb]/80 backdrop-blur-md rounded-3xl p-5 border border-white/60 shadow-xs flex flex-col justify-between shrink-0 relative overflow-y-auto">
               <div className="space-y-6">
 
                 {/* Dynamic 3-Day Rolling Calculation & Curve Generation */}
@@ -3982,6 +3874,9 @@ export default function DashboardPage() {
         )}
 
       </div>
+
+      {/* FLOATING BOTTOM DOCK: Screen-centered across all views */}
+      <DockNav activeTab="overview" />
 
       {/* SIMPLE ICONLESS ACCOUNT DELETION MODAL (MATCHES VITA UI) */}
       {showPurgeModal && (
